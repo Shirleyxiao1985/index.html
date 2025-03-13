@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国税务体系工资计算器</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* 替换为你的图片网络链接 */
+            background-image: url(https://github.com/Shirleyxiao1985/image-bed/blob/main/2.jpg?raw=true'););
+            background-size: cover;
+            background-position: center;
+            font-family: 'SimSun', serif;
+        }
+
+        .calculator {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input,
+        select {
+            margin-bottom: 15px;
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #9b7653;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #7d5f41;
+        }
+
+        #result {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 20px;
+        }
+
+        #custom-base {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="calculator">
+        <h1>中国税务体系工资计算器</h1>
+        <label for="salary">月薪（元）：</label>
+        <input type="number" id="salary" placeholder="请输入月薪">
+        <label for="region">所在地区：</label>
+        <select id="region">
+            <option value="北京">北京</option>
+            <option value="上海">上海</option>
+            <option value="广州">广州</option>
+            <option value="深圳">深圳</option>
+            <option value="成都">成都</option>
+            <option value="杭州">杭州</option>
+            <!-- 可以继续添加其他地区 -->
+        </select>
+        <label for="base-type">社保基数缴纳方式：</label>
+        <select id="base-type" onchange="toggleCustomBase()">
+            <option value="standard">标准社保基数缴纳</option>
+            <option value="custom">自由标准缴纳社保基数</option>
+        </select>
+        <div id="custom-base">
+            <label for="custom-base-value">自定义社保基数（元）：</label>
+            <input type="number" id="custom-base-value" placeholder="请输入自定义社保基数">
+        </div>
+        <button onclick="calculateNetSalary()">计算</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 定义不同地区的五险一金缴纳比例
+        const regionInsuranceRates = {
+            "北京": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.002,
+                "housing_fund": 0.12
+            },
+            "上海": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.005,
+                "housing_fund": 0.07
+            },
+            "广州": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.002,
+                "housing_fund": 0.05
+            },
+            "深圳": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.003,
+                "housing_fund": 0.05
+            },
+            "成都": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.003,
+                "housing_fund": 0.05
+            },
+            "杭州": {
+                "endowment_insurance": 0.08,
+                "medical_insurance": 0.02,
+                "unemployment_insurance": 0.005,
+                "housing_fund": 0.05
+            }
+            // 可以继续添加其他地区的比例
+        };
+
+        // 切换自定义社保基数输入框的显示状态
+        function toggleCustomBase() {
+            const baseType = document.getElementById('base-type').value;
+            const customBaseDiv = document.getElementById('custom-base');
+            if (baseType === 'custom') {
+                customBaseDiv.style.display = 'block';
+            } else {
+                customBaseDiv.style.display = 'none';
+            }
+        }
+
+        // 计算社保基数
+        function calculateSocialSecurityBase(salary) {
+            const baseType = document.getElementById('base-type').value;
+            if (baseType === 'custom') {
+                const customBase = parseFloat(document.getElementById('custom-base-value').value);
+                if (!isNaN(customBase)) {
+                    return customBase;
+                }
+            }
+            return salary;
+        }
+
+        // 计算应纳税所得额
+        function calculateTaxableIncome(salary, insuranceRate) {
+            const socialSecurityBase = calculateSocialSecurityBase(salary);
+            // 计算五险一金扣除金额
+            const insuranceDeduction = socialSecurityBase * (insuranceRate.endowment_insurance +
+                insuranceRate.medical_insurance +
+                insuranceRate.unemployment_insurance +
+                insuranceRate.housing_fund);
+            // 起征点 5000 元
+            let taxableIncome = salary - insuranceDeduction - 5000;
+            return taxableIncome > 0 ? taxableIncome : 0;
+        }
+
+        // 计算个人所得税
+        function calculateIncomeTax(taxableIncome) {
+            const taxRates = [
+                [0, 3000, 0.03, 0],
+                [3000, 12000, 0.1, 210],
+                [12000, 25000, 0.2, 1410],
+                [25000, 35000, 0.25, 2660],
+                [35000, 55000, 0.3, 4410],
+                [55000, 80000, 0.35, 7160],
+                [80000, Infinity, 0.45, 15160]
+            ];
+            let tax = 0;
+            for (const [lower, upper, rate, deduction] of taxRates) {
+                if (taxableIncome > lower) {
+                    const part = Math.min(taxableIncome, upper) - lower;
+                    tax += part * rate - deduction;
+                }
+            }
+            return tax;
+        }
+
+        // 计算实际到手工资
+        function calculateNetSalary() {
+            const salary = parseFloat(document.getElementById('salary').value);
+            const region = document.getElementById('region').value;
+            if (isNaN(salary)) {
+                document.getElementById('result').innerHTML = '请输入有效的月薪金额。';
+                return;
+            }
+            let insuranceRate = regionInsuranceRates[region];
+            if (!insuranceRate) {
+                console.log(`未找到 ${region} 的五险一金缴纳比例信息，默认使用北京标准。`);
+                insuranceRate = regionInsuranceRates["北京"];
+            }
+            const socialSecurityBase = calculateSocialSecurityBase(salary);
+            const insuranceDeduction = socialSecurityBase * (insuranceRate.endowment_insurance +
+                insuranceRate.medical_insurance +
+                insuranceRate.unemployment_insurance +
+                insuranceRate.housing_fund);
+            const taxableIncome = calculateTaxableIncome(salary, insuranceRate);
+            const incomeTax = calculateIncomeTax(taxableIncome);
+            const netSalary = salary - insuranceDeduction - incomeTax;
+
+            const resultHtml = `
+                <p>月薪：${salary} 元</p>
+                <p>社保基数：${socialSecurityBase} 元</p>
+                <p>五险一金扣除：
+                    <ul>
+                        <li>养老保险：${(socialSecurityBase * insuranceRate.endowment_insurance).toFixed(2)} 元</li>
+                        <li>医疗保险：${(socialSecurityBase * insuranceRate.medical_insurance).toFixed(2)} 元</li>
+                        <li>失业保险：${(socialSecurityBase * insuranceRate.unemployment_insurance).toFixed(2)} 元</li>
+                        <li>住房公积金：${(socialSecurityBase * insuranceRate.housing_fund).toFixed(2)} 元</li>
+                    </ul>
+                    总计：${insuranceDeduction.toFixed(2)} 元
+                </p>
+                <p>应纳税所得额：${taxableIncome.toFixed(2)} 元</p>
+                <p>个人所得税：${incomeTax.toFixed(2)} 元</p>
+                <p>实际到手工资：${netSalary.toFixed(2)} 元</p>
+            `;
+            document.getElementById('result').innerHTML = resultHtml;
+        }
+    </script>
+</body>
+
+</html>

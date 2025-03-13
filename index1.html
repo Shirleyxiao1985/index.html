@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国个税计算器 - 社保公积金在线计算工具</title>
+    
+    <!-- SEO相关 meta 标签 -->
+    <meta name="description" content="免费的中国个人所得税计算器，支持全国各大城市社保公积金计算，提供标准和自定义社保基数选择。">
+    <meta name="keywords" content="个税计算器,社保计算,公积金计算,工资计算器,个人所得税">
+    
+    <!-- 预加载背景图片 -->
+    <link rel="preload" href="./assets/images/background.jpg" as="image">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            background-image: url('./assets/images/background.jpg');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-attachment: fixed;
+            background-size: cover;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .calculator {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .banner {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #e6f7ff;
+            border-left: 4px solid #1890ff;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .mode-switch {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-switch label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .mode-switch input[type="radio"] {
+            width: auto;
+            margin-right: 5px;
+        }
+
+        .custom-base {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .custom-base.show {
+            display: block;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #40a9ff;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .result-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .result-item span:first-child {
+            color: #666;
+        }
+
+        .result-item span:last-child {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .result-detail {
+            font-size: 14px;
+            color: #666;
+            padding-left: 20px;
+            margin: 5px 0;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .calculator {
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        加载中...
+    </div>
+
+    <div class="calculator">
+        <h2>个税计算器</h2>
+        
+        <div class="banner">
+            请选择社保缴纳方式，可以选择按照标准基数或自定义基数进行计算
+        </div>
+
+        <div class="input-group">
+            <label>选择省份</label>
+            <select id="province" onchange="updateCities()">
+                <option value="">请选择省份</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>选择城市</label>
+            <select id="city">
+                <option value="">请先选择省份</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>税前工资（元）</label>
+            <input type="number" id="salary" placeholder="请输入税前工资">
+        </div>
+
+        <div class="mode-switch">
+            <label>
+                <input type="radio" name="baseMode" value="standard" checked onchange="toggleBaseInput()">
+                标准基数
+            </label>
+            <label>
+                <input type="radio" name="baseMode" value="custom" onchange="toggleBaseInput()">
+                自定义基数
+            </label>
+        </div>
+
+        <div class="custom-base" id="customBaseInput">
+            <div class="input-group">
+                <label>自定义社保基数（元）</label>
+                <input type="number" id="customBase" placeholder="请输入自定义社保基数">
+            </div>
+        </div>
+
+        <button onclick="calculate()">计算</button>
+
+        <div class="result" id="result">
+            <div class="result-item">
+                <span>税前工资：</span>
+                <span id="grossSalary">0元</span>
+            </div>
+            <div class="result-item">
+                <span>社保基数：</span>
+                <span id="insuranceBase">0元</span>
+            </div>
+            <div class="result-item">
+                <span>社保个人缴纳：</span>
+                <span id="insurance">0元</span>
+                <div class="result-detail" id="insuranceDetail"></div>
+            </div>
+            <div class="result-item">
+                <span>个人所得税：</span>
+                <span id="tax">0元</span>
+            </div>
+            <div class="result-item">
+                <span>税后工资：</span>
+                <span id="netSalary">0元</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cityData = {
+            "北京": {
+                "北京市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.002,
+                        housing: 0.12
+                    },
+                    baseMin: 3613,
+                    baseMax: 27786
+                }
+            },
+            "上海": {
+                "上海市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.005,
+                        housing: 0.07
+                    },
+                    baseMin: 5975,
+                    baseMax: 31014
+                }
+            },
+            "广东": {
+                "广州市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.002,
+                        housing: 0.05
+                    },
+                    baseMin: 3321,
+                    baseMax: 20004
+                },
+                "深圳市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.003,
+                        housing: 0.05
+                    },
+                    baseMin: 2200,
+                    baseMax: 25044
+                }
+            },
+            "浙江": {
+                "杭州市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.005,
+                        housing: 0.12
+                    },
+                    baseMin: 3321,
+                    baseMax: 19236
+                }
+            },
+            "江苏": {
+                "南京市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.005,
+                        housing: 0.08
+                    },
+                    baseMin: 3368,
+                    baseMax: 19236
+                },
+                "苏州市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.005,
+                        housing: 0.08
+                    },
+                    baseMin: 3368,
+                    baseMax: 19236
+                }
+            },
+            "四川": {
+                "成都市": {
+                    insuranceRates: {
+                        pension: 0.08,
+                        medical: 0.02,
+                        unemployment: 0.004,
+                        housing: 0.06
+                    },
+                    baseMin: 3100,
+                    baseMax: 16842
+                }
+            }
+        };
+
+        function initProvinces() {
+            const provinceSelect = document.getElementById('province');
+            Object.keys(cityData).forEach(province => {
+                const option = document.createElement('option');
+                option.value = province;
+                option.textContent = province;
+                provinceSelect.appendChild(option);
+            });
+        }
+
+        function updateCities() {
+            const province = document.getElementById('province').value;
+            const citySelect = document.getElementById('city');
+            citySelect.innerHTML = '<option value="">请选择城市</option>';
+            
+            if (province && cityData[province]) {
+                Object.keys(cityData[province]).forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+            }
+        }
+
+        function toggleBaseInput() {
+            const customBaseDiv = document.getElementById('customBaseInput');
+            const isCustom = document.querySelector('input[name="baseMode"]:checked').value === 'custom';
+            customBaseDiv.className = isCustom ? 'custom-base show' : 'custom-base';
+        }
+
+        function calculate() {
+            const salary = parseFloat(document.getElementById('salary').value);
+            const province = document.getElementById('province').value;
+            const city = document.getElementById('city').value;
+            const isCustomBase = document.querySelector('input[name="baseMode"]:checked').value === 'custom';
+            
+            if (!province || !city || !salary || salary <= 0) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            const cityConfig = cityData[province][city];
+            let insuranceBase;
+            
+            if (isCustomBase) {
+                const customBase = parseFloat(document.getElementById('customBase').value);
+                if (!customBase || customBase < cityConfig.baseMin || customBase > cityConfig.baseMax) {
+                    alert(`社保基数必须在${cityConfig.baseMin}至${cityConfig.baseMax}之间`);
+                    return;
+                }
+                insuranceBase = customBase;
+            } else {
+                insuranceBase = Math.min(Math.max(salary, cityConfig.baseMin), cityConfig.baseMax);
+            }
+
+            const rates = cityConfig.insuranceRates;
+            const insuranceDetails = {
+                pension: insuranceBase * rates.pension,
+                medical: insuranceBase * rates.medical,
+                unemployment: insuranceBase * rates.unemployment,
+                housing: insuranceBase * rates.housing
+            };
+            
+            const totalInsurance = Object.values(insuranceDetails).reduce((a, b) => a + b, 0);
+
+            const taxableIncome = salary - totalInsurance - 5000;
+            let tax = 0;
+            if (taxableIncome > 0) {
+                if (taxableIncome <= 3000) tax = taxableIncome * 0.03;
+                else if (taxableIncome <= 12000) tax = taxableIncome * 0.1 - 210;
+                else if (taxableIncome <= 25000) tax = taxableIncome * 0.2 - 1410;
+                else if (taxableIncome <= 35000) tax = taxableIncome * 0.25 - 2660;
+                else if (taxableIncome <= 55000) tax = taxableIncome * 0.3 - 4410;
+                else if (taxableIncome <= 80000) tax = taxableIncome * 0.35 - 7160;
+                else tax = taxableIncome * 0.45 - 15160;
+            }
+
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('grossSalary').textContent = salary.toFixed(2) + '元';
+            document.getElementById('insuranceBase').textContent = insuranceBase.toFixed(2) + '元';
+            document.getElementById('insurance').textContent = totalInsurance.toFixed(2) + '元';
+            document.getElementById('tax').textContent = tax.toFixed(2) + '元';
+            document.getElementById('netSalary').textContent = (salary - totalInsurance - tax).toFixed(2) + '元';
+
+            document.getElementById('insuranceDetail').innerHTML = `
+                养老保险: ${insuranceDetails.pension.toFixed(2)}元<br>
+                医疗保险: ${insuranceDetails.medical.toFixed(2)}元<br>
+                失业保险: ${insuranceDetails.unemployment.toFixed(2)}元<br>
+                住房公积金: ${insuranceDetails.housing.toFixed(2)}元
+            `;
+        }
+
+        window.onload = function() {
+            document.getElementById('loading').classList.add('hidden');
+            initProvinces();
+        };
+    </script>
+</body>
+</html>
